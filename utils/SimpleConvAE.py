@@ -8,10 +8,10 @@ class SimpleConvAE(nn.Module):
         # in: b, 3, 64, 64
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 16, 3, stride=1, padding=1),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.BatchNorm2d(16),
             nn.Conv2d(16, 16, 3, stride=1, padding=1),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.BatchNorm2d(16),
             nn.MaxPool2d(2, stride=2, return_indices=True),
         )
@@ -20,9 +20,9 @@ class SimpleConvAE(nn.Module):
 
         self.decoder = nn.Sequential(
             nn.ConvTranspose2d(16, 16, 3, stride=1, padding=1),
-            nn.ReLU(True),
+            nn.ReLU(),
             nn.ConvTranspose2d(16, 3, 3, stride=1, padding=1),
-            nn.Tanh(),
+            nn.ReLU(),
         )
 
     def forward(self, x):
