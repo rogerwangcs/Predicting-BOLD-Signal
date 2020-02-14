@@ -1,6 +1,8 @@
-from plotFuncs import *
-from fitFuncs import *
-from SimpleConvAE import *
-from extractRunFrames import *
-from generateFeatures import *
-from datasets import *
+from Datasets import *
+
+from plotUtils import *
+from fitUtils import *
+from loadUtils import *
+from featureUtils import *
+
+from extractVideoFrames import *
