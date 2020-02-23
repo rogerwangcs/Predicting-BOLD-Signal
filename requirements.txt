@@ -1,0 +1,11 @@
+numpy
+scipy
+
+ipywidgets
+tqdm
+
+
+torch
+torchsummary
+
+nibabel
