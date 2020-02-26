@@ -27,8 +27,8 @@ def sampleAE(dataset, model, index=None):
     if not index:
         index = random.randint(0, dataset.__len__())
 
-    inputImg = dataset.__getitem__(index)[0].cuda()
-    outputImg = model.forward(inputImg.unsqueeze(0))[0].squeeze()
+    inputImg = dataset.__getitem__(index)[0]
+    outputImg = model.forward(inputImg.cuda().unsqueeze(0))[0].squeeze().cpu()
 
     fig = plt.figure(figsize=(6, 12), facecolor='white')
     fig.suptitle('Image #%d' % index, y=0.635, fontsize=16)
