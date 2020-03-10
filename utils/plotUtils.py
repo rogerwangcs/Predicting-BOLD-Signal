@@ -14,6 +14,7 @@ def peekImageFolderDS(dataset):
                  bbox=dict(facecolor='pink', alpha=1))
         plt.imshow(image.permute(1, 2, 0))
     plt.show()
+    return fig
 
 
 def sampleAE(dataset, model, index=None):
@@ -39,6 +40,7 @@ def sampleAE(dataset, model, index=None):
     ax2.set_xlabel('Decoded')
     plt.imshow(outputImg.permute(1, 2, 0).detach().numpy())
     plt.show()
+    return fig
 
 
 def plotCompareFeatures(feature, feature_conv):
@@ -47,6 +49,7 @@ def plotCompareFeatures(feature, feature_conv):
     ax1.plot(feature)
     ax2.plot(feature_conv)
     fig1.show()
+    return fig1
 
 
 def showAnat(fdata, coords):
@@ -64,6 +67,7 @@ def showAnat(fdata, coords):
         axes[i].set_xlabel(labels[i])
     fig.align_labels()
     fig.show()
+    return fig
 
 # showAnat(anat_data, (45, 27, 17, 0))
 # repeated_mask_data=np.repeat(mask_data[:, :, :, np.newaxis], 451, axis=3) # duplicate for 451 time frames

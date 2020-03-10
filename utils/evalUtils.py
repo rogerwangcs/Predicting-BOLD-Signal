@@ -1,22 +1,6 @@
 import torch
 import numpy as np
 
-# def correlateFeature(dataset, model,  idx):
-#     feature = dataset.__getitem__(idx)[0]
-#     label = dataset.__getitem__(idx)[1]
-#     pred = model.forward(torch.tensor(feature).float().cuda()).cpu()
-
-#     pearsonCorr = torch.tensor(np.corrcoef(pred.clone().detach().numpy(), label.numpy())).float()
-#     return pearsonCorr[0, 1].item()
-
-# def evaluateFeatureDataset(dataset, model):
-#     scores = []
-#     for i in range(len(dataset)):
-#         score = correlateFeature(dataset, model, i)
-#         scores.append(score)
-#     return sum(scores)/len(scores)
-
-
 # predictFeature : returns 1d numpy array of response prediction in voxels
 def predictFeature(dataset, model, idx):
     feature = dataset.__getitem__(idx)[0]
@@ -37,11 +21,36 @@ def predictAllFeatures(dataset, model):
     
     return preds_and_labels
 
-def featureAcrossTimeCorr(x):
     return np.corrcoef(x[:, 0], x[:, 1])[0, 1]
 
 
 def featuresCorr(dataset, model):
+    """ Returns average correlation of output of given linear model vs true brain response """
+    
+    def featureAcrossTimeCorr(x):
+        return np.corrcoef(x[:, 0], x[:, 1])[0, 1]
+
     preds_and_labels = predictAllFeatures(dataset, model)
     corrs = [featureAcrossTimeCorr(x) for x in preds_and_labels]
     return sum(corrs)/len(corrs)
+
+def correlateDataset(dataset, model):
+    """ Returns average correlation of the images in given dataset vs its autoencoded output of given model """
+    
+    corrs = np.empty(len(dataset))
+    
+    def correlateImage(img1, img2):
+        img_size = img1.shape[1] # (3 [64] 64)
+        x = img2 - img1
+        x = x ** 2
+        x = np.sum(x, axis=0)
+        x = np.sqrt(x)
+        return 1 - np.sum(x)/(img_size**2)
+
+    for i in range(len(dataset)):
+        inputImg = dataset.__getitem__(i)[0]
+        outputImg = model.forward(inputImg.cuda().unsqueeze(0))[0].squeeze().cpu()
+        inputImg = inputImg.numpy()
+        outputImg = outputImg.detach().numpy()
+        corrs[i] = correlateImage(inputImg, outputImg)
+    return np.mean(corrs)

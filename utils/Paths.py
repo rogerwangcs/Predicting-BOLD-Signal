@@ -29,9 +29,9 @@ def ffa_mask_path(sub): return os.path.join(forrest_derivatives_path, 'fmriprep/
 
 def func_path(sub, run): return os.path.join(forrest_derivatives_path,'fmriprep/sub-{:02d}_complete/ses-movie/func/sub-{:02d}_ses-movie_task-movie_run-{}_bold_space-MNI152NLin2009cAsym_preproc.nii.gz').format(sub, sub, run + 1)
 
-def encoded_features(model, run=None):
+def encoded_features(model, run=None, save_name=''):
     if run is not None:
-        return os.path.join(forrest_path, 'encoded_features/{}/features-{}.pt'.format(model, run))
+        return os.path.join(forrest_path, 'encoded_features/{}/features-{}-{}.pt'.format(model, run, save_name))
     else:
         return os.path.join(forrest_path, 'encoded_features/{}/'.format(model))
 
@@ -45,6 +45,6 @@ def testPaths():
     
     print(os.path.isfile(ffa_mask_path(1)), end=' ')
     print(os.path.isfile(func_path(1,1)), end=' ')
-    print(os.path.isfile(encoded_features('SimpleConvAE',1)), end=' ')
+    print(os.path.isfile(encoded_features('SimpleConvAE',run=1)), end=' ')
     
 testPaths()

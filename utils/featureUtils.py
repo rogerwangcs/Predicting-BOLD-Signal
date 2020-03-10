@@ -59,7 +59,7 @@ def generateFeatures(dataset, model, featureLen):
     return features
 
 
-def generateAllFeatures(model, snapshotsPaths, outputPath):
+def generateAllFeatures(model, snapshotsPaths, outputPath, save_name):
 
     model = model.cuda()
 
@@ -71,11 +71,8 @@ def generateAllFeatures(model, snapshotsPaths, outputPath):
 
         print('Encoding run {} frames...'.format(runIdx))
         dataset = SingleDirDataset(snapshotsPath, image_transforms)
-        numFeatures = model(dataset.__getitem__(0)[0].unsqueeze(0).cuda())[
-            1].view(1, -1).shape[1]
-        trainloader = DataLoader(
-            dataset, batch_size=64, shuffle=True, num_workers=1, pin_memory=True)
+        numFeatures = model(dataset.__getitem__(0)[0].unsqueeze(0).cuda())[1].view(1, -1).shape[1]
+        trainloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=1, pin_memory=True)
 
         features = generateFeatures(dataset, model, numFeatures)
-        torch.save(features, os.path.join(
-            outputPath, 'features-{}.pt'.format(runIdx)))
+        torch.save(features, os.path.join(outputPath, 'features-{}-{}.pt'.format(runIdx, save_name)))

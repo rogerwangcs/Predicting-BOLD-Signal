@@ -15,15 +15,18 @@ image_transforms = torchvision.transforms.Compose([
 
 import Paths
 
-
-def loadModel(path, model, optimizer):
+def loadModel(path, model):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    
+def loadModelWithOpt(path, model, optimizer):
     checkpoint = torch.load(path)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     
-def loadFeatures(model, run, responseLen, debug=False):
-    features = torch.load(Paths.encoded_features(model, run))
+def loadFeatures(model, run, responseLen, save_name='', debug=False):
+    features = torch.load(Paths.encoded_features(model, run, save_name=save_name))
     features = features[:responseLen]
     features = stats.zscore(features.detach(), axis=0)
     if debug:
