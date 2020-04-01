@@ -7,15 +7,15 @@ from torch import nn, optim
 from torch.utils.data import BatchSampler, RandomSampler, ConcatDataset, DataLoader
 
 from models import FeatureNet
-from evalUtils import featuresCorr
-from plotUtils import  sampleAE
-from evalUtils import correlateDataset
-from loadUtils import loadModel
-from featureUtils import generateAllFeatures
-import Paths
+from evalutils import featuresCorr
+from plotutils import  sampleAE
+from evalutils import correlateDataset
+from loadutils import loadModel, load_encoded_run_datasets, load_pixel_run_datasets
+from featureutils import generateAllFeatures
+import paths
 
 
-def fitAE(model, criterion, optimizer, dataloader, epochs=10):
+def fit_ae(model, criterion, optimizer, dataloader, epochs=10):
     model.train()
     loss_memory = []
     pbar = tqdm_notebook(range(epochs), leave=True)
@@ -48,7 +48,7 @@ def fitAE(model, criterion, optimizer, dataloader, epochs=10):
                 running_loss = 0.0
 
 
-def fitFeatureModel(model, criterion, optimizer, dataloader, epochs=10, debug=False):
+def fit_feature_model(model, criterion, optimizer, dataloader, epochs=10, debug=False):
     model.train()
     loss_memory = []
 
@@ -56,7 +56,7 @@ def fitFeatureModel(model, criterion, optimizer, dataloader, epochs=10, debug=Fa
     if debug:
         pbar = tqdm_notebook(range(epochs), leave=True)
 
-    numBatches = len(dataloader)
+    numBatches = len(dataloader.dataset)
     # set running loss print frequency
     lossCutoff = min(numBatches, (numBatches*epochs)/100)
 
@@ -82,15 +82,15 @@ def fitFeatureModel(model, criterion, optimizer, dataloader, epochs=10, debug=Fa
                 pbar.set_description("Loss: %.4f" % (running_loss))
                 pbar.refresh()
                 running_loss = 0.0
-                
 
-def featureNetCrossVal(datasets, outputPath, epochs, debug=False):
-    eval_scores = np.empty((8, 2))
-    for i in range(8):
+
+def feature_net_cross_eval(datasets, outputPath, epochs, debug=False):
+    eval_scores = np.empty((8, 8))
+    for test_run_idx in range(8):
         # create indices for train and test split
         train_runs_indices = [j for j in range(8)]
-        test_run = train_runs_indices.pop(i)
-        train_dataset_list = [datasets[i] for i in train_runs_indices]
+        train_runs_indices.pop(test_run_idx)
+        train_dataset_list = [datasets[j] for j in train_runs_indices]
 
         # create combined training set
         combined_train_dataset = ConcatDataset(train_dataset_list)
@@ -102,32 +102,37 @@ def featureNetCrossVal(datasets, outputPath, epochs, debug=False):
         num_ffa_voxels = combined_train_dataset.__getitem__(0)[1].shape[0]
         model = FeatureNet(num_features, num_ffa_voxels).cuda()
         model.train()
-        criterion = torch.nn.MSELoss() 
+        criterion = torch.nn.MSELoss()
         optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.001)
 
         # fit model
-        fitFeatureModel(model, criterion, optimizer, train_loader, epochs=epochs, debug=debug)
-        
+        fit_feature_model(model, criterion, optimizer, train_loader, epochs=epochs, debug=debug)
+
         # Evaluate model
         model.eval()
-        # in sample error
-        eval_scores[i, 0] = featuresCorr(combined_train_dataset, model)
-        # out of sample error
-        test_dataset = datasets[i]
-        eval_scores[i, 1] = featuresCorr(test_dataset, model)
-        
+
+        # Each column stores the individual run correlations for a given test set
+        for run_idx, run in enumerate(datasets):
+            eval_scores[run_idx, test_run_idx] = featuresCorr(datasets[run_idx], model)
+
+#         # in sample error
+#         eval_scores[test_run_idx, 0] = featuresCorr(combined_train_dataset, model)
+#         # out of sample error
+#         test_dataset = datasets[test_run_idx]
+#         eval_scores[test_run_idx, 1] = featuresCorr(test_dataset, model)
+
         # Save data
         np.save(outputPath, eval_scores)
     return eval_scores
 
-def train_all_autoencoders(dataloader, autoencoders, epochs=50, save_name=''):
+def fit_autoencoders(dataloader, autoencoders, epochs=50, save_name=''):
     for ae in autoencoders:
         # instantiate and fit model
         print('Training {} model...'.format(ae))
         model = autoencoders[ae]
         criterion = nn.MSELoss()
         optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0001)
-        fitAE(model, criterion, optimizer, dataloader, epochs=epochs)
+        fit_ae(model, criterion, optimizer, dataloader, epochs=epochs)
 
         # show size of encoded featuers
         encoded_features_size = model(dataloader.dataset.__getitem__(0)[0].unsqueeze(0).cuda())[1].view(1, -1).shape[1]
@@ -137,11 +142,11 @@ def train_all_autoencoders(dataloader, autoencoders, epochs=50, save_name=''):
         fig = sampleAE(dataloader.dataset, model)
         fig_path = os.path.join(Paths.models_path, 'autoencoders/{}-{}.png'.format(ae, save_name))
         fig.savefig(fig_path)
-        
+
         # calculate correlation between dataset
         corr = correlateDataset(dataloader.dataset, model)
         print(corr)
-        
+
         # save model
         model_params = {
             'model_state_dict': model.state_dict()
@@ -149,22 +154,42 @@ def train_all_autoencoders(dataloader, autoencoders, epochs=50, save_name=''):
         save_path = os.path.join(Paths.models_path, 'autoencoders/{}-{}.pth'.format(ae, save_name))
         print("{} model saved.".format(ae))
         torch.save(model_params, save_path)
-        
+
         print("Training complete.")
-        
+
 def encode_all_forrest_mult_autoencoders(autoencoders, save_name=''):
     for ae in autoencoders:
-        
+
         # Load model for eval
         model = autoencoders[ae]
         model_path = os.path.join(Paths.models_path, 'autoencoders/{}-{}.pth'.format(ae, save_name))
         loadModel(model_path, model)
         model.eval()
-        
+
         # Generate features for all forrest runs for one ae
         print('Encoding forrest features for {} model...'.format(ae))
         save_path = Paths.encoded_features(ae, save_name=save_name)
         snapshot_paths = [Paths.movie_run_snapshots_path(i) for i in range(8)]
         generateAllFeatures(model, snapshot_paths, save_path, save_name=save_name)
-        
+
         print("Feature encoding complete.")
+
+def experiment_all_subjects(feature_models, epochs=50, save_name=''):
+    subjects = [i for i in range (1, 5 + 1)] # 20 total subjects
+    encoded_feature_types = ['Pixels', 'SimpleConvAE', 'SimpleConvAESmall', 'SparseAE']
+
+    for sub in subjects:
+        for encoded_feature_type in encoded_feature_types:
+
+            print("Training {} on subject {}... ".format(encoded_feature_type, sub), end='')
+
+            all_run_datasets = None
+            if encoded_feature_type == 'Pixels':
+                all_run_datasets = load_pixel_run_datasets(sub)
+            else:
+                all_run_datasets = load_encoded_run_datasets(encoded_feature_type, sub, save_name=features_save_name)
+
+            save_path = os.path.join(Paths.results_path, 'sub-{:02d}'.format(sub), '{}-{}.npy'.format(encoded_feature_type, results_save_name))
+            feature_net_cross_eval(all_run_datasets, save_path, epochs=epochs)
+
+            print("done.")

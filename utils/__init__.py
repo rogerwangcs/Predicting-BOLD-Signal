@@ -1,9 +1,10 @@
-from Datasets import *
+from datasets import *
 
-from plotUtils import *
-from fitUtils import *
-from loadUtils import *
-from featureUtils import *
-from evalUtils import *
+from plotutils import *
+from fitutils import *
+from loadutils import *
+from featureutils import *
+from evalutils import *
+from exploreutils import *
 
-from extractVideoFrames import *
+from extract_video_frames import *

@@ -1,5 +1,7 @@
 import random
+import numpy as np
 import matplotlib.pyplot as plt
+from utils import paths
 
 
 def peekImageFolderDS(dataset):
@@ -74,3 +76,46 @@ def showAnat(fdata, coords):
 # showAnat(repeated_mask_data, (45, 27, 17, 1))
 # anat_masked = anat_data * repeated_mask_data
 # showAnat(anat_masked, (45, 27, 17, 1))
+
+def get_results_col_order(cv_results_path):
+    cv_results = np.load(cv_results_path)
+    train_test_results = np.empty((8,2))
+    for test_run_idx in range(8):
+        total_corr = np.sum(cv_results[0:test_run_idx, test_run_idx]) \
+                   + np.sum(cv_results[test_run_idx+1:, test_run_idx])
+        train_test_results[test_run_idx, 0] = total_corr/7
+        train_test_results[test_run_idx, 1] = cv_results[test_run_idx, test_run_idx]
+    return train_test_results
+
+def get_results_row_order(cv_results_path):
+    cv_results = np.load(cv_results_path)
+    train_test_results = np.empty((8,2))
+    for test_run_idx in range(8):
+        total_corr = np.sum(cv_results[test_run_idx, 0:test_run_idx]) \
+                   + np.sum(cv_results[test_run_idx, test_run_idx+1:])
+        train_test_results[test_run_idx, 0] = total_corr/7
+        train_test_results[test_run_idx, 1] = cv_results[test_run_idx, test_run_idx]
+    return train_test_results
+
+def plot_all_results(subjects, feature_models, plot_shape, col_idx, results_save_name):
+    rows, cols = plot_shape
+    print(rows)
+    fig = plt.figure(figsize=(rows*8, cols*3), facecolor='white')
+    for idx, sub in enumerate(subjects):
+        fig.add_subplot(rows, cols, idx+1)
+        for feature_model in feature_models:
+            cv_results_path = ''
+            if feature_model == 'LR':
+                cv_results_path = paths.results_path + "/sub-{:02d}/{}-{}.npy".format(sub, feature_model, 'march29')
+            else:
+                cv_results_path = paths.results_path + "/sub-{:02d}/{}-{}.npy".format(sub, feature_model, 'march29')
+
+            cv_results = get_results_row_order(cv_results_path)
+
+            plt.plot(cv_results[:,col_idx])
+
+        plt.title("Subject {:02d}".format(sub))
+        plt.legend(feature_models)
+        plt.xlabel("Run #")
+        plt.ylabel("Correlation")
+    plt.show()

@@ -6,7 +6,7 @@ from tqdm import tqdm_notebook
 from scipy import stats
 import numpy as np
 
-from Datasets import SingleDirDataset
+import datasets
 
 image_transforms = torchvision.transforms.Compose([
     torchvision.transforms.CenterCrop(350),
@@ -70,7 +70,7 @@ def generateAllFeatures(model, snapshotsPaths, outputPath, save_name):
             continue
 
         print('Encoding run {} frames...'.format(runIdx))
-        dataset = SingleDirDataset(snapshotsPath, image_transforms)
+        dataset = datasets.SingleDirDataset(snapshotsPath, image_transforms)
         numFeatures = model(dataset.__getitem__(0)[0].unsqueeze(0).cuda())[1].view(1, -1).shape[1]
         trainloader = DataLoader(dataset, batch_size=64, shuffle=True, num_workers=1, pin_memory=True)
 

@@ -42,9 +42,7 @@ def testPaths():
     print(os.path.isdir(project_path), end=' ')
     print(os.path.isdir(datasets_path), end=' ')
     print(os.path.isdir(models_path), end=' ')
-    
+
     print(os.path.isfile(ffa_mask_path(1)), end=' ')
     print(os.path.isfile(func_path(1,1)), end=' ')
     print(os.path.isfile(encoded_features('SimpleConvAE',run=1)), end=' ')
-    
-testPaths()
